@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chúc mừng Trung Thu • Lời chúc VIP</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Itim&family=Montserrat:wght@300;500;700&display=swap" rel="stylesheet">
+  <meta name="description" content="Thiệp chúc mừng Trung Thu đẹp, tương tác, có QR để chia sẻ" />
+  <style>
+    :root{
+      --bg1:#08102a; --bg2:#14213d; --accent:#ffd166; --accent-2:#ff7a59; --glass: rgba(255,255,255,0.06);
+      --card-w:860px; --max-w:1100px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: 'Montserrat', system-ui, -apple-system, 'Itim', cursive; color:#fff;
+      background: radial-gradient(1200px 600px at 10% 20%, rgba(255,209,102,0.06), transparent),
+                  linear-gradient(180deg,var(--bg1),var(--bg2));
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* container */
+    .wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:48px}
+    .stage{width:100%; max-width:var(--max-w); display:grid; grid-template-columns: 1fr 420px; gap:36px; align-items:center}
+
+    /* hero card */
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border-radius:20px; padding:28px; box-shadow: 0 10px 40px rgba(2,6,23,0.6); backdrop-filter: blur(6px);
+      position:relative; overflow:visible; min-height:520px;
+    }
+    .brand{
+      display:flex; gap:12px; align-items:center; margin-bottom:6px;
+    }
+    .logo{width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); display:flex; align-items:center; justify-content:center; font-weight:700; color:#3b1a00; font-size:22px; box-shadow:0 6px 18px rgba(255,125,89,0.14)}
+    h1{font-size:44px; margin:8px 0; color:var(--accent); text-shadow: 0 6px 30px rgba(255,209,102,0.14)}
+    p.lead{margin:0 0 18px 0; color:rgba(255,255,255,0.85); font-size:18px}
+
+    /* moon & lanterns */
+    .scene{position:absolute; right:36px; top:-60px; transform:translateZ(0);}
+    .moon{
+      width:220px; height:220px; border-radius:50%; background: radial-gradient(circle at 30% 25%, #fff6d6 0%, #ffdca8 30%, #ffdb7d 55%, #f3c05c 100%);
+      box-shadow: 0 0 40px rgba(255,220,110,0.16), inset -10px -8px 30px rgba(0,0,0,0.06);
+      transform:translateY(0); animation: float 8s ease-in-out infinite;
+    }
+    @keyframes float{ 0%{transform:translateY(0)} 50%{transform:translateY(8px)} 100%{transform:translateY(0)} }
+
+    /* card content layout */
+    .content{display:flex; gap:24px; align-items:flex-start}
+    .col{flex:1}
+
+    /* interactive card preview */
+    .preview{
+      width:100%; max-width:680px; height:340px; margin-top:10px; border-radius:16px; background: linear-gradient(180deg,#0b1a3a 0%, #07102a 100%);
+      border:1px solid rgba(255,255,255,0.04); padding:22px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;
+    }
+    .lanterns{position:absolute; left:14px; bottom:10px; display:flex; gap:10px}
+    .lantern{width:40px; height:64px; border-radius:10px; background:linear-gradient(180deg,#ff8b6b,#ff624d); box-shadow:0 10px 30px rgba(255,98,77,0.12); transform-origin:center bottom; animation: sway 3s ease-in-out infinite}
+    .lantern:nth-child(2){animation-delay:.4s; transform:scale(.9)}
+    @keyframes sway{ 0%{transform:rotate(-2deg)} 50%{transform:rotate(3deg)} 100%{transform:rotate(-2deg)} }
+
+    .message{font-family:'Itim', cursive; font-size:28px; color:#ffd; text-align:center; text-shadow:0 6px 22px rgba(0,0,0,0.45)}
+    .message small{display:block; font-size:12px; opacity:.8; margin-top:6px}
+
+    /* right column */
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:14px; padding:18px}
+    label{display:block; font-size:13px; color:rgba(255,255,255,0.9); margin-bottom:6px}
+    input[type=text], textarea{width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:#fff; outline:none}
+    textarea{min-height:120px; resize:vertical}
+
+    .btn{display:inline-flex; gap:10px; align-items:center; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; font-weight:600}
+    .btn-cta{background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#3b1a00; box-shadow:0 10px 30px rgba(255,150,100,0.12)}
+    .btn-ghost{background:transparent; border:1px solid rgba(255,255,255,0.06); color:#fff}
+
+    .qr-wrap{display:flex; gap:12px; align-items:center; margin-top:12px}
+    .qr{width:140px; height:140px; border-radius:12px; background:linear-gradient(180deg,#fff 0%, #f0f0f0 100%); padding:8px; display:flex; align-items:center; justify-content:center}
+    .qr img{width:100%; height:100%; object-fit:contain; border-radius:8px}
+
+    /* footer */
+    footer{margin-top:18px; color:rgba(255,255,255,0.6); font-size:13px}
+
+    /* responsive */
+    @media (max-width:980px){
+      .stage{grid-template-columns:1fr;}
+      .scene{display:none}
+      .card{min-height:unset}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="stage">
+      <div class="card">
+        <div class="brand">
+          <div class="logo">TT</div>
+          <div>
+            <div style="font-size:13px; opacity:.9">Thiệp Trung Thu</div>
+            <div style="font-size:12px; opacity:.6">Phiên bản VIP — Tùy chỉnh & chia sẻ</div>
+          </div>
+        </div>
+        <h1>Chúc bạn một Tết Trung Thu ấm áp</h1>
+        <p class="lead">Gửi lời chúc đến người thân — tạo thiệp có QR để họ quét và mở trên điện thoại. Thiết kế đẹp, hiệu ứng mượt, đẹp trên cả desktop & mobile.</p>
+
+        <div class="content">
+          <div class="col">
+            <div class="preview" id="preview">
+              <div style="position:absolute; left:20px; top:20px; font-size:12px; opacity:.7">🌙 Đêm Trung Thu</div>
+              <div class="message" id="previewText">🌕 Chúc bạn Trung Thu vui vẻ!<small id="previewFrom">— Từ: Bạn</small></div>
+              <div class="lanterns">
+                <div class="lantern"></div>
+                <div class="lantern"></div>
+                <div class="lantern"></div>
+              </div>
+            </div>
+
+            <footer>Tip: Nhập lời chúc ở bên phải rồi nhấn <strong>Tạo thiệp</strong>. Sau đó tải hoặc in QR để chia sẻ.</footer>
+          </div>
+
+          <aside class="col panel">
+            <label for="to">Gửi tới</label>
+            <input id="to" type="text" placeholder="Tên người nhận (ví dụ: Mẹ, Nam, Lan)" />
+
+            <label for="msg" style="margin-top:12px">Lời chúc</label>
+            <textarea id="msg" placeholder="Viết lời chúc ngắn gọn, 1–2 câu. Ví dụ: Chúc mẹ Trung Thu vui vẻ, luôn mạnh khỏe!"></textarea>
+
+            <label for="from" style="margin-top:12px">Tên người gửi</label>
+            <input id="from" type="text" placeholder="Tên bạn (ví dụ: Bảo)" />
+
+            <div style="display:flex; gap:8px; margin-top:12px">
+              <button class="btn btn-cta" id="generate">Tạo thiệp</button>
+              <button class="btn btn-ghost" id="download">Tải ảnh</button>
+            </div>
+
+            <div class="qr-wrap">
+              <div class="qr" id="qrHolder">
+                <img id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://example.com" alt="qr">
+              </div>
+              <div style="flex:1">
+                <div style="font-size:13px; opacity:.9">QR mặc định dẫn tới trang này. Bạn có thể thay link để QR trỏ tới bất kỳ URL nào (ví dụ: trang cá nhân hoặc thiệp riêng).</div>
+                <input id="qrUrl" type="text" placeholder="https://" style="margin-top:8px" />
+                <div style="display:flex; gap:8px; margin-top:8px">
+                  <button class="btn btn-ghost" id="updateQr">Cập nhật QR</button>
+                  <button class="btn btn-ghost" id="downloadQr">Tải QR</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px; font-size:12px; opacity:.8">Muốn in QR dạng hình tròn/bánh trung thu? Gửi link ảnh bánh trung thu, mình sẽ ghép logo vào giữa QR (yêu cầu service tạo QR nâng cao nếu bạn muốn mặc định offline).</div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="scene">
+        <div class="moon" title="Trăng rằm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thư viện: html2canvas để tải thiệp -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    // Elements
+    const toEl = document.getElementById('to');
+    const msgEl = document.getElementById('msg');
+    const fromEl = document.getElementById('from');
+    const generateBtn = document.getElementById('generate');
+    const previewText = document.getElementById('previewText');
+    const previewFrom = document.getElementById('previewFrom');
+    const qrImg = document.getElementById('qrImg');
+    const qrUrl = document.getElementById('qrUrl');
+    const updateQr = document.getElementById('updateQr');
+    const downloadBtn = document.getElementById('download');
+    const downloadQrBtn = document.getElementById('downloadQr');
+    const preview = document.getElementById('preview');
+
+    // Generate preview
+    generateBtn.addEventListener('click', ()=>{
+      const to = toEl.value.trim() || 'Bạn';
+      const msg = msgEl.value.trim() || 'Chúc bạn Trung Thu vui vẻ!';
+      const from = fromEl.value.trim() || 'Bạn';
+      previewText.innerHTML = `🌕 ${escapeHtml(msg)} <small style=\"display:block;font-size:12px;opacity:.85;margin-top:10px\">— Gửi tới: ${escapeHtml(to)} — ${escapeHtml(from)}</small>`;
+      // small CSS animation pulse
+      preview.classList.add('pulse');
+      setTimeout(()=> preview.classList.remove('pulse'), 900);
+    });
+
+    // Update QR image
+    updateQr.addEventListener('click', ()=>{
+      const url = qrUrl.value.trim() || location.href;
+      const safe = encodeURIComponent(url);
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${safe}`;
+    });
+
+    // Download QR
+    downloadQrBtn.addEventListener('click', ()=>{
+      const a = document.createElement('a');
+      a.href = qrImg.src;
+      a.download = 'qrcode.png';
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    // Download preview as image (html2canvas)
+    downloadBtn.addEventListener('click', async ()=>{
+      downloadBtn.disabled = true; downloadBtn.textContent = 'Đang tạo...';
+      try{
+        const canvas = await html2canvas(preview, {backgroundColor: null, scale:2});
+        const data = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = data; a.download = 'thieptet_trungthu.png'; document.body.appendChild(a); a.click(); a.remove();
+      }catch(e){
+        alert('Tạo ảnh thất bại — thử lại nhé.');
+        console.error(e);
+      } finally{ downloadBtn.disabled = false; downloadBtn.textContent = 'Tải ảnh'; }
+    });
+
+    // small helper
+    function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // small UX: allow enter to trigger generate
+    [toEl, msgEl, fromEl].forEach(el=> el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); generateBtn.click(); } }));
+
+    // initial animation
+    window.addEventListener('load', ()=>{
+      setTimeout(()=> document.querySelector('.card').style.transform = 'translateY(0)', 80);
+    });
+  </script>
+</body>
+</html>
