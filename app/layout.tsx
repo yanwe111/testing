@@ -5,7 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Chúc mừng Tết Trung Thu',
+  title: 'Minh Thư dễ thương',
   description: 'Chúc mừng Tết Trung Thu',
   generator: 'Chúc mừng Tết Trung Thu',
 }
