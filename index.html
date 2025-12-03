@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Apple OCR Web Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    #ocrText {
+      white-space: pre-wrap;
+      min-height: 120px;
+      background: #fafafa;
+      border-radius: 6px;
+      padding: 10px;
+      border: 1px solid #eee;
+    }
+    #status {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Apple OCR Web Demo</h1>
+
+  <div class="card">
+    <p><strong>Step 1:</strong> Chọn 1 ảnh (trang sách / văn bản).</p>
+    <input type="file" id="imageInput" accept="image/*" />
+
+    <p style="margin-top: 12px;">
+      <strong>Step 2:</strong>
+      <button id="uploadBtn">Upload & OCR</button>
+    </p>
+
+    <p id="status"></p>
+  </div>
+
+  <div class="card">
+    <h2>OCR Result</h2>
+    <div id="ocrText">(chưa có dữ liệu)</div>
+  </div>
+
+  <script>
+    // 👉 THAY URL NÀY BẰNG URL NGROK CỦA BẠN
+    // Ví dụ: "https://xyz-1234.ngrok-free.app"
+    const BACKEND_URL = "https://YOUR_NGROK_URL.ngrok-free.app";
+
+    const uploadBtn = document.getElementById("uploadBtn");
+    const imageInput = document.getElementById("imageInput");
+    const ocrTextEl = document.getElementById("ocrText");
+    const statusEl = document.getElementById("status");
+
+    uploadBtn.addEventListener("click", async () => {
+      const file = imageInput.files[0];
+      if (!file) {
+        alert("Hãy chọn 1 ảnh trước!");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      uploadBtn.disabled = true;
+      statusEl.textContent = "Đang upload & OCR...";
+      ocrTextEl.textContent = "";
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/process-image`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Server error: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        ocrTextEl.textContent = data.ocr_text || "(Không có text trả về)";
+        statusEl.textContent = "✅ Hoàn thành!";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "❌ Lỗi: " + err.message;
+        ocrTextEl.textContent = "(Không có dữ liệu)";
+      } finally {
+        uploadBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
