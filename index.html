@@ -65,6 +65,10 @@
     <h2>OCR Result</h2>
     <div id="ocrText">(chưa có dữ liệu)</div>
   </div>
+    <div class="card">
+    <h2>Keywords</h2>
+    <ul id="keywordsList"></ul>
+  </div>
 
   <script>
     // 👉 THAY URL NÀY BẰNG URL NGROK CỦA BẠN
@@ -75,6 +79,7 @@
     const imageInput = document.getElementById("imageInput");
     const ocrTextEl = document.getElementById("ocrText");
     const statusEl = document.getElementById("status");
+    const keywordsList = document.getElementById("keywordsList");
 
     uploadBtn.addEventListener("click", async () => {
       const file = imageInput.files[0];
@@ -106,8 +111,28 @@
         if (data.error) {
           throw new Error(data.error);
         }
-
         ocrTextEl.textContent = data.ocr_text || "(Không có text trả về)";
+        statusEl.textContent = "✅ Hoàn thành!";
+
+        keywordsList.innerHTML = "";
+
+        if (data.keywords && data.google_links) {
+        data.keywords.forEach((kw, idx) => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = data.google_links[idx];
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = kw;
+            li.appendChild(a);
+            keywordsList.appendChild(li);
+        });
+        } else {
+        const li = document.createElement("li");
+        li.textContent = "(Không có keyword)";
+        keywordsList.appendChild(li);
+        }
+    
         statusEl.textContent = "✅ Hoàn thành!";
       } catch (err) {
         console.error(err);
