@@ -3,21 +3,20 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).end();
-  }
+  if (req.method !== "POST") return res.status(405).end();
 
-  // ⚠️ EC2 BACKEND (HTTP)
   const EC2_URL = "http://18.138.11.123:8000/process-image";
+  const qs = req.url.includes("?") ? req.url.split("?")[1] : "";
 
   try {
-    const qs = req.url.includes("?") ? req.url.split("?")[1] : "";
     const upstream = await fetch(`${EC2_URL}?${qs}`, {
       method: "POST",
       headers: {
+        // giữ nguyên content-type multipart boundary từ client
         "content-type": req.headers["content-type"] || "",
       },
-      body: req,
+      body: req,            // stream thẳng lên EC2
+      duplex: "half",       // ✅ BẮT BUỘC để hết lỗi bạn gặp
     });
 
     res.status(upstream.status);
