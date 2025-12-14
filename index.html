@@ -215,12 +215,26 @@
       const ocrRes = await runPuterOCR(imageFile);
       console.log("OCR raw:", ocrRes);
 
-      const text =
-        (ocrRes?.text ?? ocrRes?.data?.text ?? ocrRes?.result ?? "")
-        .toString()
-        .trim();
+      let text = "";
 
-      if (!text) throw new Error("OCR không trả text (xem console: OCR raw)");
+      if (typeof ocrRes === "string") {
+        text = ocrRes;
+      } else if (Array.isArray(ocrRes)) {
+        text = ocrRes.join("\n");
+      } else if (ocrRes?.text) {
+        text = ocrRes.text;
+      } else if (ocrRes?.data?.text) {
+        text = ocrRes.data.text;
+      } else {
+        text = String(ocrRes || "");
+      }
+
+      text = text.trim();
+
+      if (!text) {
+        throw new Error("OCR không có nội dung text");
+      }
+
 
       ocrTextEl.textContent = text;
       setStatus("muted", "⏳ Đang gửi text sang EC2 để lấy keywords...");
