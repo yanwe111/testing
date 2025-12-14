@@ -4,159 +4,199 @@
   <meta charset="UTF-8" />
   <title>OCR + Keyword Extractor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Puter SDK -->
   <script src="https://js.puter.com/v2/"></script>
 
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f7fb;
-      margin: 0;
-      padding: 32px;
-    }
-    h1 {
-      text-align: center;
-    }
-    .container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      max-width: 1200px;
-      margin: auto;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.08);
-    }
-    .preview img {
-      max-width: 100%;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-    }
-    button {
-      margin-top: 12px;
-      padding: 10px 18px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      background: #111827;
-      color: white;
-    }
-    button:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-    }
-    textarea {
-      width: 100%;
-      min-height: 220px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      padding: 12px;
-      font-family: monospace;
-    }
-    ul {
-      padding-left: 18px;
-    }
-    .error {
-      color: #dc2626;
-      font-weight: 600;
-      margin-top: 10px;
-    }
+    :root { --bg:#f5f7fb; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 16px 48px; }
+    h1 { text-align: center; margin: 10px 0 6px; font-size: 34px; letter-spacing: .2px; }
+    .sub { text-align:center; color: var(--muted); margin: 0 0 22px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.06); }
+    .card h2 { margin: 0 0 12px; font-size: 18px; }
+    .row { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    input[type="file"]{ padding: 10px; border: 1px solid var(--border); border-radius: 12px; background:#fff; width: 100%; }
+    .preview { margin-top: 12px; border: 1px dashed var(--border); border-radius: 14px; padding: 12px; background: #fafafa; }
+    .preview img { max-width: 100%; border-radius: 12px; display:block; margin: 0 auto; border: 1px solid var(--border); }
+    .actions { margin-top: 12px; display:flex; gap: 10px; }
+    button { padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; font-weight: 700; }
+    .btn-primary { background: #111827; color: #fff; border-color: #111827; }
+    .btn-ghost { background: #fff; color: #111827; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .status { margin-top: 10px; font-weight: 700; }
+    .ok { color: #16a34a; }
+    .err { color: #dc2626; }
+    .box { background: #0b1220; color: #e5e7eb; border-radius: 14px; padding: 14px; min-height: 220px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .muted { color: var(--muted); font-weight: 600; }
+    ul { margin: 10px 0 0; padding-left: 18px; }
+    li { margin: 6px 0; }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    @media (max-width: 900px){ .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
+
 <body>
+  <div class="wrap">
+    <h1>OCR + Keyword Extractor</h1>
+    <p class="sub">OCR bằng <b>Puter.js</b> (frontend) → gửi text sang <b>EC2</b> chạy KeyBERT</p>
 
-<h1>📘 OCR (Puter) → 🔑 Keyword (KeyBERT)</h1>
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="card">
+        <h2>1) Chọn ảnh</h2>
+        <input type="file" id="fileInput" accept="image/*" />
+        <div class="preview" id="preview">
+          <div class="muted">Chưa chọn ảnh</div>
+        </div>
 
-<div class="container">
-  <!-- LEFT -->
-  <div class="card">
-    <h2>1️⃣ Chọn ảnh</h2>
-    <input type="file" id="fileInput" accept="image/*" />
-    <div class="preview" id="preview"></div>
+        <div class="actions">
+          <button class="btn-primary" id="ocrBtn">OCR</button>
+          <button class="btn-ghost" id="clearBtn" type="button">Clear</button>
+        </div>
 
-    <button id="ocrBtn">OCR</button>
-    <div id="status" class="error"></div>
+        <div class="status" id="status"></div>
+        <div class="muted" style="margin-top:6px;">✅ Giữ preview như bạn yêu cầu</div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="card">
+        <h2>2) OCR Text</h2>
+        <div class="box" id="ocrText">(Không có dữ liệu)</div>
+
+        <h2 style="margin-top:14px;">3) Keywords</h2>
+        <ul id="keywords"><li class="muted">(Không có dữ liệu)</li></ul>
+      </div>
+    </div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="card">
-    <h2>2️⃣ OCR Text</h2>
-    <textarea id="ocrText" placeholder="OCR text sẽ hiện ở đây..."></textarea>
+  <script>
+    // ✅ BẮT BUỘC dùng HTTPS (Vercel là HTTPS)
+    const EC2_KEYWORD_API = "https://18.138.11.123.nip.io/keywords";
 
-    <h2 style="margin-top:16px;">3️⃣ Keywords</h2>
-    <ul id="keywords"></ul>
-  </div>
-</div>
+    const fileInput  = document.getElementById("fileInput");
+    const preview    = document.getElementById("preview");
+    const ocrBtn     = document.getElementById("ocrBtn");
+    const clearBtn   = document.getElementById("clearBtn");
+    const statusEl   = document.getElementById("status");
+    const ocrTextEl  = document.getElementById("ocrText");
+    const keywordsEl = document.getElementById("keywords");
 
-<script>
-  const EC2_KEYWORD_API = "http://18.138.11.123:8000/keywords"; // EC2 của bạn
+    let imageFile = null;
 
-  const fileInput = document.getElementById("fileInput");
-  const preview = document.getElementById("preview");
-  const ocrBtn = document.getElementById("ocrBtn");
-  const status = document.getElementById("status");
-  const ocrText = document.getElementById("ocrText");
-  const keywordsEl = document.getElementById("keywords");
+    function setStatus(type, msg){
+      statusEl.className = "status " + (type === "ok" ? "ok" : type === "err" ? "err" : "");
+      statusEl.textContent = msg || "";
+    }
 
-  let imageFile = null;
+    function resetOutputs(){
+      ocrTextEl.textContent = "(Không có dữ liệu)";
+      keywordsEl.innerHTML = '<li class="muted">(Không có dữ liệu)</li>';
+    }
 
-  fileInput.onchange = () => {
-    imageFile = fileInput.files[0];
-    preview.innerHTML = "";
-    if (imageFile) {
+    fileInput.addEventListener("change", () => {
+      imageFile = fileInput.files?.[0] || null;
+      preview.innerHTML = "";
+
+      if (!imageFile) {
+        preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
+        setStatus("", "");
+        resetOutputs();
+        return;
+      }
+
       const img = document.createElement("img");
       img.src = URL.createObjectURL(imageFile);
+      img.onload = () => URL.revokeObjectURL(img.src);
       preview.appendChild(img);
-    }
-  };
 
-  ocrBtn.onclick = async () => {
-    status.textContent = "";
-    keywordsEl.innerHTML = "";
-    ocrText.value = "";
+      setStatus("", "");
+      resetOutputs();
+    });
 
-    if (!imageFile) {
-      status.textContent = "❌ Chưa chọn ảnh";
-      return;
-    }
+    clearBtn.addEventListener("click", () => {
+      fileInput.value = "";
+      imageFile = null;
+      preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
+      setStatus("", "");
+      resetOutputs();
+    });
 
-    ocrBtn.disabled = true;
+    ocrBtn.addEventListener("click", async () => {
+      setStatus("", "");
+      resetOutputs();
 
-    try {
-      // 1️⃣ OCR bằng Puter (frontend)
-      const result = await puter.ai.vision.ocr(imageFile);
-      const text = result.text || "";
+      if (!imageFile) {
+        setStatus("err", "❌ Chưa chọn ảnh");
+        return;
+      }
 
-      ocrText.value = text;
+      ocrBtn.disabled = true;
+      setStatus("", "⏳ Đang OCR...");
 
-      // 2️⃣ Gửi text sang EC2 để KeyBERT
-      const res = await fetch(EC2_KEYWORD_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, topn: 5 })
-      });
+      try {
+        // 1) OCR ở frontend bằng Puter
+        const ocrRes = await puter.ai.vision.ocr(imageFile);
+        const text = (ocrRes && ocrRes.text) ? String(ocrRes.text).trim() : "";
 
-      const data = await res.json();
+        if (!text) {
+          setStatus("err", "❌ OCR không trả text (Puter trả rỗng)");
+          return;
+        }
 
-      data.keywords.forEach(k => {
-        const li = document.createElement("li");
-        li.textContent = k;
-        keywordsEl.appendChild(li);
-      });
+        ocrTextEl.textContent = text;
+        setStatus("", "⏳ Đang gửi text sang EC2 để lấy keywords...");
 
-    } catch (e) {
-      console.error(e);
-      status.textContent = "❌ OCR hoặc Keyword lỗi (xem console)";
-    } finally {
-      ocrBtn.disabled = false;
-    }
-  };
-</script>
+        // 2) Gửi text sang EC2 (HTTPS)
+        const res = await fetch(EC2_KEYWORD_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, topn: 5 }),
+        });
 
+        const raw = await res.text();
+        if (!res.ok) throw new Error(`EC2 ${res.status}: ${raw}`);
+
+        const data = JSON.parse(raw);
+        const kws = data.keywords || [];
+        const links = data.google_links || [];
+
+        keywordsEl.innerHTML = "";
+        if (!kws.length) {
+          keywordsEl.innerHTML = '<li class="muted">(Không có keyword)</li>';
+        } else {
+          kws.forEach((kw, i) => {
+            const li = document.createElement("li");
+            if (links[i]) {
+              const a = document.createElement("a");
+              a.href = links[i];
+              a.target = "_blank";
+              a.rel = "noopener noreferrer";
+              a.textContent = kw;
+              li.appendChild(a);
+            } else {
+              li.textContent = kw;
+            }
+            keywordsEl.appendChild(li);
+          });
+        }
+
+        setStatus("ok", "✅ Xong!");
+      } catch (e) {
+        console.error(e);
+        const msg = String(e?.message || e);
+        // Gợi ý đúng nguyên nhân hay gặp
+        if (msg.includes("Failed to fetch")) {
+          setStatus("err", "❌ Failed to fetch (thường do HTTPS/Mixed Content hoặc EC2 chưa mở 443/CORS)");
+        } else {
+          setStatus("err", "❌ Lỗi: " + msg);
+        }
+      } finally {
+        ocrBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
