@@ -2,128 +2,34 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <title>OCR & Keyword Extractor Demo</title>
+  <title>OCR Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      max-width: 860px;
-      margin: 40px auto;
-      padding: 0 16px;
-      line-height: 1.4;
-    }
-    h1, h2 { margin: 0 0 10px; }
-    .sub { text-align: center; color: #666; margin: 6px 0 20px; }
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 16px;
-      margin-top: 16px;
-      background: #fff;
-    }
-    .row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    label { font-weight: 600; }
-    input[type="file"] { width: 100%; }
-    select, input[type="number"] {
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      min-width: 120px;
-    }
-    button {
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      background: #111;
-      color: #fff;
-    }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    #status { margin-top: 10px; font-size: 14px; color: #444; }
-    #ocrText {
-      white-space: pre-wrap;
-      min-height: 140px;
-      background: #fafafa;
-      border-radius: 8px;
-      padding: 12px;
-      border: 1px solid #eee;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 13px;
-    }
-
-    .preview-wrap { display: flex; gap: 16px; flex-wrap: wrap; }
-    #preview {
-      max-width: 280px;
-      border: 1px solid #eee;
-      border-radius: 10px;
-      display: none;
-    }
-
-    ul { padding-left: 18px; margin: 8px 0 0; }
-    a { color: #0b57d0; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .hint { color: #666; font-size: 13px; margin-top: 6px; }
-    .danger { color: #b00020; }
+    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:860px;margin:40px auto;padding:0 16px}
+    .card{border:1px solid #ddd;border-radius:10px;padding:16px;margin-top:16px}
+    button{padding:10px 14px;border-radius:8px;border:none;cursor:pointer;background:#111;color:#fff}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    #status{margin-top:10px;font-size:14px}
+    .danger{color:#b00020}
+    #ocrText{white-space:pre-wrap;min-height:140px;background:#fafafa;border-radius:8px;padding:12px;border:1px solid #eee}
+    #preview{max-width:280px;border:1px solid #eee;border-radius:10px;display:none;margin-top:10px}
+    ul{padding-left:18px}
   </style>
 </head>
 
 <body>
-  <h1 style="text-align:center;">OCR & Keyword Extractor Web Demo</h1>
-  <div class="sub">Group 10</div>
+  <h1 style="text-align:center;margin:0 0 6px">OCR & Keyword Extractor</h1>
+  <div style="text-align:center;color:#666;margin:0 0 20px">Vercel Frontend</div>
 
   <div class="card">
-    <div class="row">
-      <div style="flex: 1; min-width: 240px;">
-        <label for="imageInput">Step 1: Chọn ảnh</label>
-        <input type="file" id="imageInput" accept="image/*" />
-        <div class="hint">Ảnh càng rõ chữ càng tốt. (bìa sách / trang sách)</div>
-      </div>
+    <input type="file" id="imageInput" accept="image/*" />
+    <img id="preview" />
 
-      <div style="min-width: 140px;">
-        <label for="langSelect">Lang</label><br />
-        <select id="langSelect">
-          <option value="vie" selected>vie</option>
-          <option value="eng">eng</option>
-          <option value="vie+eng">vie+eng</option>
-        </select>
-      </div>
-
-      <div style="min-width: 140px;">
-        <label for="psmInput">PSM</label><br />
-        <input id="psmInput" type="number" min="0" max="13" value="11" />
-      </div>
-
-      <div style="min-width: 140px;">
-        <label for="topnInput">TopN</label><br />
-        <input id="topnInput" type="number" min="1" max="15" value="5" />
-      </div>
-    </div>
-
-    <p style="margin-top: 12px;">
+    <p style="margin-top:12px">
       <button id="uploadBtn">Upload & OCR</button>
-      <button id="healthBtn" style="background:#444;margin-left:8px;">Check /health</button>
     </p>
 
-    <p id="status"></p>
-    <div class="hint">
-      Nếu bạn chạy backend trên EC2/NGROK, nhớ bật CORS đúng domain. Nếu gọi EC2 qua HTTP nhưng site bạn là HTTPS có thể bị chặn “mixed content”.
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Preview</h2>
-    <div class="preview-wrap">
-      <img id="preview" alt="preview" />
-      <div class="hint" id="fileInfo">(chưa chọn ảnh)</div>
-    </div>
+    <div id="status"></div>
   </div>
 
   <div class="card">
@@ -136,143 +42,82 @@
     <ul id="keywordsList"><li>(chưa có dữ liệu)</li></ul>
   </div>
 
-  <script>
-    // ✅ THAY URL NÀY BẰNG URL THẬT CỦA BẠN
-    // - Ngrok: https://xxxx.ngrok-free.app
-    // - EC2: http://18.138.xx.xx:8000  (nếu site bạn là https thì sẽ bị mixed-content)
-    const BACKEND_URL = "http://18.138.11.123:8000/";
+<script>
+  const uploadBtn = document.getElementById("uploadBtn");
+  const imageInput = document.getElementById("imageInput");
+  const ocrTextEl = document.getElementById("ocrText");
+  const statusEl = document.getElementById("status");
+  const keywordsList = document.getElementById("keywordsList");
+  const preview = document.getElementById("preview");
 
-    const uploadBtn = document.getElementById("uploadBtn");
-    const healthBtn = document.getElementById("healthBtn");
-    const imageInput = document.getElementById("imageInput");
-    const ocrTextEl = document.getElementById("ocrText");
-    const statusEl = document.getElementById("status");
-    const keywordsList = document.getElementById("keywordsList");
-    const preview = document.getElementById("preview");
-    const fileInfo = document.getElementById("fileInfo");
+  function setStatus(msg, err=false){
+    statusEl.textContent = msg;
+    statusEl.className = err ? "danger" : "";
+  }
 
-    const langSelect = document.getElementById("langSelect");
-    const psmInput = document.getElementById("psmInput");
-    const topnInput = document.getElementById("topnInput");
+  imageInput.addEventListener("change", () => {
+    const f = imageInput.files[0];
+    if(!f){ preview.style.display="none"; return; }
+    preview.src = URL.createObjectURL(f);
+    preview.style.display="block";
+  });
 
-    function setStatus(msg, isError = false) {
-      statusEl.textContent = msg;
-      statusEl.className = isError ? "danger" : "";
+  async function readError(res){
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      const j = await res.json().catch(()=>null);
+      return j?.error || j?.detail || JSON.stringify(j);
     }
+    return await res.text();
+  }
 
-    function renderKeywords(keywords = [], links = []) {
-      keywordsList.innerHTML = "";
-      if (!keywords || keywords.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "(Không có keyword)";
-        keywordsList.appendChild(li);
-        return;
-      }
+  uploadBtn.addEventListener("click", async () => {
+    const file = imageInput.files[0];
+    if(!file) return alert("Chọn ảnh trước!");
 
-      keywords.forEach((kw, idx) => {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.textContent = kw;
+    const fd = new FormData();
+    fd.append("image", file);
 
-        const link = links && links[idx] ? links[idx] : null;
-        if (link) {
-          a.href = link;
-          a.target = "_blank";
-          a.rel = "noopener noreferrer";
-        } else {
-          a.href = "#";
-        }
+    uploadBtn.disabled = true;
+    setStatus("Đang OCR...");
+    ocrTextEl.textContent = "";
+    keywordsList.innerHTML = "";
 
-        li.appendChild(a);
-        keywordsList.appendChild(li);
-      });
-    }
+    try {
+      const res = await fetch(
+        `/api/ocr?lang=vie&psm=11&topn=5`,
+        { method:"POST", body: fd }
+      );
 
-    async function readError(res) {
-      // ưu tiên json {detail: "..."} hoặc {error:"..."}
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const j = await res.json().catch(() => null);
-        if (j?.detail) return String(j.detail);
-        if (j?.error) return String(j.error);
-        return JSON.stringify(j);
-      }
-      return await res.text().catch(() => `Server error: ${res.status}`);
-    }
+      if(!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
 
-    imageInput.addEventListener("change", () => {
-      const file = imageInput.files[0];
-      if (!file) {
-        preview.style.display = "none";
-        fileInfo.textContent = "(chưa chọn ảnh)";
-        return;
-      }
-      fileInfo.textContent = `File: ${file.name} (${Math.round(file.size / 1024)} KB)`;
-      const url = URL.createObjectURL(file);
-      preview.src = url;
-      preview.style.display = "block";
-    });
-
-    healthBtn.addEventListener("click", async () => {
-      healthBtn.disabled = true;
-      setStatus("Đang check /health...");
-      try {
-        const res = await fetch(`${BACKEND_URL}/health`);
-        const text = await res.text();
-        if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
-        setStatus("✅ /health OK");
-        ocrTextEl.textContent = text;
-      } catch (e) {
-        setStatus("❌ /health lỗi: " + e.message, true);
-      } finally {
-        healthBtn.disabled = false;
-      }
-    });
-
-    uploadBtn.addEventListener("click", async () => {
-      const file = imageInput.files[0];
-      if (!file) {
-        alert("Hãy chọn 1 ảnh trước!");
-        return;
-      }
-
-      const lang = langSelect.value;
-      const psm = Number(psmInput.value || 11);
-      const topn = Number(topnInput.value || 5);
-
-      const formData = new FormData();
-      formData.append("image", file);
-
-      uploadBtn.disabled = true;
-      healthBtn.disabled = true;
-      setStatus("Đang upload & OCR...");
-      ocrTextEl.textContent = "";
+      ocrTextEl.textContent = data.ocr_text || "(Không có text)";
       keywordsList.innerHTML = "";
 
-      try {
-        const url = `${BACKEND_URL}/process-image?lang=${encodeURIComponent(lang)}&psm=${encodeURIComponent(psm)}&topn=${encodeURIComponent(topn)}`;
-        const res = await fetch(url, { method: "POST", body: formData });
-
-        if (!res.ok) {
-          const errText = await readError(res);
-          throw new Error(errText || `HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-
-        ocrTextEl.textContent = data.ocr_text || "(Không có text trả về)";
-        renderKeywords(data.keywords || [], data.google_links || []);
-        setStatus("✅ Hoàn thành!");
-      } catch (err) {
-        console.error(err);
-        setStatus("❌ Lỗi: " + (err?.message || String(err)), true);
-        ocrTextEl.textContent = "(Không có dữ liệu)";
-        renderKeywords([], []);
-      } finally {
-        uploadBtn.disabled = false;
-        healthBtn.disabled = false;
+      if(!data.keywords || !data.keywords.length){
+        keywordsList.innerHTML = "<li>(Không có keyword)</li>";
+      } else {
+        data.keywords.forEach((kw,i)=>{
+          const li=document.createElement("li");
+          const a=document.createElement("a");
+          a.textContent=kw;
+          a.href=data.google_links?.[i]||"#";
+          a.target="_blank";
+          li.appendChild(a);
+          keywordsList.appendChild(li);
+        });
       }
-    });
-  </script>
+
+      setStatus("✅ Hoàn thành!");
+    } catch(e){
+      console.error(e);
+      setStatus("❌ " + e.message, true);
+      ocrTextEl.textContent="(Lỗi)";
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  });
+</script>
 </body>
 </html>
