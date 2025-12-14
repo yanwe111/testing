@@ -4,75 +4,143 @@
   <meta charset="UTF-8" />
   <title>OCR + Keyword Extractor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Puter SDK v2 -->
   <script src="https://js.puter.com/v2/"></script>
 
   <style>
-    :root { --bg:#f5f7fb; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; }
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 16px 48px; }
-    h1 { text-align: center; margin: 10px 0 6px; font-size: 34px; letter-spacing: .2px; }
-    .sub { text-align:center; color: var(--muted); margin: 0 0 22px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.06); }
-    .card h2 { margin: 0 0 12px; font-size: 18px; }
-    .row { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    input[type="file"]{ padding: 10px; border: 1px solid var(--border); border-radius: 12px; background:#fff; width: 100%; }
-    .preview { margin-top: 12px; border: 1px dashed var(--border); border-radius: 14px; padding: 12px; background: #fafafa; }
-    .preview img { max-width: 100%; border-radius: 12px; display:block; margin: 0 auto; border: 1px solid var(--border); }
-    .actions { margin-top: 12px; display:flex; gap: 10px; }
-    button { padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; font-weight: 700; }
-    .btn-primary { background: #111827; color: #fff; border-color: #111827; }
-    .btn-ghost { background: #fff; color: #111827; }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .status { margin-top: 10px; font-weight: 700; }
-    .ok { color: #16a34a; }
-    .err { color: #dc2626; }
-    .box { background: #0b1220; color: #e5e7eb; border-radius: 14px; padding: 14px; min-height: 220px; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .muted { color: var(--muted); font-weight: 600; }
-    ul { margin: 10px 0 0; padding-left: 18px; }
-    li { margin: 6px 0; }
-    a { color: #2563eb; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    @media (max-width: 900px){ .grid { grid-template-columns: 1fr; } }
+    :root{
+      --bg:#f5f7fb; --card:#fff; --text:#0f172a; --muted:#64748b;
+      --border:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.08);
+      --btn:#111827; --btn2:#ffffff;
+      --ok:#16a34a; --err:#dc2626;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:28px;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    header{max-width:1200px;margin:0 auto 18px auto}
+    h1{margin:0 0 6px 0;text-align:center;font-size:34px;letter-spacing:.2px}
+    .sub{margin:0;text-align:center;color:var(--muted)}
+    .container{
+      max-width:1200px;margin:18px auto 0 auto;
+      display:grid; grid-template-columns: 1fr 1fr; gap:22px;
+    }
+    @media (max-width: 980px){ .container{grid-template-columns:1fr} }
+
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:18px; box-shadow:var(--shadow);
+    }
+    .card h2{margin:2px 0 12px 0;font-size:20px}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+    input[type="file"]{
+      padding:10px 12px; border:1px solid var(--border);
+      border-radius:12px; background:#fff; flex:1;
+    }
+
+    .preview{
+      margin-top:12px;
+      border:1px dashed var(--border);
+      border-radius:14px;
+      padding:12px;
+      min-height:260px;
+      display:flex; align-items:center; justify-content:center;
+      background:#fafafa;
+      overflow:hidden;
+    }
+    .preview img{
+      max-width:100%;
+      max-height:520px;
+      border-radius:12px;
+      border:1px solid var(--border);
+    }
+    .hint{margin-top:10px;color:var(--muted);font-size:14px}
+
+    .btn{
+      border:1px solid transparent;
+      padding:10px 16px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+      transition:transform .05s ease;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:var(--btn); color:#fff}
+    .btn.secondary{background:var(--btn2); color:var(--text); border-color:var(--border)}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+
+    .status{
+      margin-top:12px; font-weight:700;
+      padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    .status.ok{border-color:rgba(22,163,74,.25); color:var(--ok); background:rgba(22,163,74,.06)}
+    .status.err{border-color:rgba(220,38,38,.25); color:var(--err); background:rgba(220,38,38,.06)}
+    .status.muted{color:var(--muted); background:#fff}
+
+    .panel{
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:linear-gradient(180deg,#0b1023,#0a0f22);
+      color:#e5e7eb;
+      padding:14px;
+      min-height:260px;
+      white-space:pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size:13.5px;
+      line-height:1.5;
+    }
+    ul{margin:10px 0 0 0; padding-left:18px}
+    li{margin:6px 0}
+    a{color:#2563eb; text-decoration:none}
+    a:hover{text-decoration:underline}
+    .muted{color:var(--muted)}
   </style>
 </head>
-
 <body>
-  <div class="wrap">
-    <h1>OCR + Keyword Extractor</h1>
-    <p class="sub">OCR bằng <b>Puter.js</b> (frontend) → gửi text sang <b>EC2</b> chạy KeyBERT</p>
 
-    <div class="grid">
-      <!-- LEFT -->
-      <div class="card">
-        <h2>1) Chọn ảnh</h2>
-        <input type="file" id="fileInput" accept="image/*" />
-        <div class="preview" id="preview">
-          <div class="muted">Chưa chọn ảnh</div>
-        </div>
+<header>
+  <h1>OCR + Keyword Extractor</h1>
+  <p class="sub">OCR bằng <b>Puter.ai.img2txt</b> (frontend Vercel) → gửi text sang EC2 để chạy <b>KeyBERT</b></p>
+</header>
 
-        <div class="actions">
-          <button class="btn-primary" id="ocrBtn">OCR</button>
-          <button class="btn-ghost" id="clearBtn" type="button">Clear</button>
-        </div>
-
-        <div class="status" id="status"></div>
-        <div class="muted" style="margin-top:6px;">✅ Giữ preview như bạn yêu cầu</div>
-      </div>
-
-      <!-- RIGHT -->
-      <div class="card">
-        <h2>2) OCR Text</h2>
-        <div class="box" id="ocrText">(Không có dữ liệu)</div>
-
-        <h2 style="margin-top:14px;">3) Keywords</h2>
-        <ul id="keywords"><li class="muted">(Không có dữ liệu)</li></ul>
-      </div>
+<div class="container">
+  <!-- LEFT -->
+  <section class="card">
+    <h2>1) Chọn ảnh</h2>
+    <div class="row">
+      <input type="file" id="fileInput" accept="image/*" />
+      <button class="btn primary" id="ocrBtn">OCR</button>
+      <button class="btn secondary" id="clearBtn">Clear</button>
     </div>
-  </div>
 
-  <script>
+    <div class="preview" id="preview">
+      <div class="muted">Chưa chọn ảnh</div>
+    </div>
+
+
+    <div id="status" class="status muted">Sẵn sàng</div>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="card">
+    <h2>2) OCR Text</h2>
+    <div id="ocrText" class="panel">(Không có dữ liệu)</div>
+
+    <h2 style="margin-top:14px;">3) Keywords</h2>
+    <ul id="keywords"><li class="muted">(Không có dữ liệu)</li></ul>
+  </section>
+</div>
+
+<script>
+  // ⚠️ Quan trọng: Vercel là https → EC2 cũng phải https để khỏi “Failed to fetch / Mixed content”
+  // Mẹo nhanh dùng nip.io (có https): https://18.138.11.123.nip.io/keywords
+  // Nhưng EC2 phải mở port 443 hoặc bạn reverse proxy/ALB (mình đưa CLI ở tin sau nếu cần).
   const EC2_KEYWORD_API = "https://18.138.11.123.nip.io/keywords";
 
   const fileInput  = document.getElementById("fileInput");
@@ -86,9 +154,10 @@
   let imageFile = null;
 
   function setStatus(type, msg){
-    statusEl.className = "status " + (type === "ok" ? "ok" : type === "err" ? "err" : "");
+    statusEl.className = "status " + (type || "muted");
     statusEl.textContent = msg || "";
   }
+
   function resetOutputs(){
     ocrTextEl.textContent = "(Không có dữ liệu)";
     keywordsEl.innerHTML = '<li class="muted">(Không có dữ liệu)</li>';
@@ -100,7 +169,7 @@
 
     if (!imageFile) {
       preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
-      setStatus("", "");
+      setStatus("muted", "Sẵn sàng");
       resetOutputs();
       return;
     }
@@ -110,7 +179,7 @@
     img.onload = () => URL.revokeObjectURL(img.src);
     preview.appendChild(img);
 
-    setStatus("", "");
+    setStatus("muted", "Đã chọn ảnh. Bấm OCR để chạy.");
     resetOutputs();
   });
 
@@ -118,28 +187,20 @@
     fileInput.value = "";
     imageFile = null;
     preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
-    setStatus("", "");
+    setStatus("muted", "Sẵn sàng");
     resetOutputs();
   });
 
   async function runPuterOCR(file) {
-    // đảm bảo SDK load xong
-    if (!window.puter) throw new Error("Puter SDK chưa load (window.puter undefined)");
-
-    // Thử theo thứ tự các API hay gặp
-    if (puter?.ai?.ocr) {
-      return await puter.ai.ocr(file);
+    if (!window.puter?.ai?.img2txt) {
+      console.log("puter.ai =", window.puter?.ai);
+      throw new Error("Puter SDK chưa có puter.ai.img2txt (kiểm tra console)");
     }
-    if (puter?.ai?.vision?.ocr) {
-      return await puter.ai.vision.ocr(file);
-    }
-
-    // debug rõ ràng để bạn biết SDK đang có gì
-    throw new Error("Puter OCR API không tồn tại. Hãy mở console và kiểm tra puter.ai");
+    return await puter.ai.img2txt(file);
   }
 
   ocrBtn.addEventListener("click", async () => {
-    setStatus("", "");
+    setStatus("muted", "");
     resetOutputs();
 
     if (!imageFile) {
@@ -148,22 +209,21 @@
     }
 
     ocrBtn.disabled = true;
-    setStatus("", "⏳ Đang OCR (Puter)...");
+    setStatus("muted", "⏳ Đang OCR bằng Puter (img2txt)...");
 
     try {
       const ocrRes = await runPuterOCR(imageFile);
+      console.log("OCR raw:", ocrRes);
 
-      // Puter có thể trả { text } hoặc { data: { text } } tuỳ bản
       const text =
-        (ocrRes?.text ?? ocrRes?.data?.text ?? "").toString().trim();
+        (ocrRes?.text ?? ocrRes?.data?.text ?? ocrRes?.result ?? "")
+        .toString()
+        .trim();
 
-      if (!text) {
-        console.log("OCR raw:", ocrRes);
-        throw new Error("OCR không trả text (xem console log: OCR raw)");
-      }
+      if (!text) throw new Error("OCR không trả text (xem console: OCR raw)");
 
       ocrTextEl.textContent = text;
-      setStatus("", "⏳ Đang gửi text sang EC2 để lấy keywords...");
+      setStatus("muted", "⏳ Đang gửi text sang EC2 để lấy keywords...");
 
       const res = await fetch(EC2_KEYWORD_API, {
         method: "POST",
@@ -201,8 +261,6 @@
       setStatus("ok", "✅ Xong!");
     } catch (e) {
       console.error(e);
-      // debug nhanh cho Puter SDK
-      console.log("puter.ai =", window.puter?.ai);
       setStatus("err", "❌ Lỗi: " + (e?.message || e));
     } finally {
       ocrBtn.disabled = false;
