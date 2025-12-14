@@ -2,42 +2,58 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
-<title>OCR Demo</title>
+<title>OCR + Keyword Demo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  max-width: 900px;
-  margin: 40px auto;
-}
-.card {
-  border: 1px solid #ddd;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-img {
-  max-width: 100%;
-  margin-top: 10px;
-}
-button {
-  padding: 10px 16px;
-  font-size: 14px;
-}
-pre {
-  white-space: pre-wrap;
-  background: #f7f7f7;
-  padding: 10px;
-}
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 16px;
+  }
+  h1 {
+    text-align: center;
+  }
+  .card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+  button {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  img {
+    max-width: 100%;
+    margin-top: 12px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+  }
+  pre {
+    white-space: pre-wrap;
+    background: #f7f7f7;
+    padding: 12px;
+    border-radius: 6px;
+    min-height: 120px;
+  }
 </style>
 </head>
-<body>
 
-<h1>OCR + Keyword Demo</h1>
+<body>
+<h1>OCR + Keyword Extractor</h1>
 
 <div class="card">
   <input type="file" id="imageInput" accept="image/*" />
-  <br/><br/>
+  <br><br>
   <button id="ocrBtn">OCR</button>
   <p id="status"></p>
   <img id="preview" />
@@ -45,7 +61,7 @@ pre {
 
 <div class="card">
   <h3>OCR Text</h3>
-  <pre id="ocrText">(chưa có)</pre>
+  <pre id="ocrText">(chưa có dữ liệu)</pre>
 </div>
 
 <div class="card">
@@ -54,62 +70,71 @@ pre {
 </div>
 
 <script>
-const API_URL = "http://EC2_PUBLIC_IP:8000/process-image";
+  // 🔴 THAY IP NÀY BẰNG PUBLIC IP EC2 CỦA BẠN
+  const API_URL = "http://EC2_PUBLIC_IP:8000/process-image";
 
-const imgInput = document.getElementById("imageInput");
-const preview = document.getElementById("preview");
-const btn = document.getElementById("ocrBtn");
-const status = document.getElementById("status");
-const ocrText = document.getElementById("ocrText");
-const keywords = document.getElementById("keywords");
+  const imageInput = document.getElementById("imageInput");
+  const preview = document.getElementById("preview");
+  const btn = document.getElementById("ocrBtn");
+  const statusEl = document.getElementById("status");
+  const ocrTextEl = document.getElementById("ocrText");
+  const keywordsEl = document.getElementById("keywords");
 
-imgInput.onchange = () => {
-  const file = imgInput.files[0];
-  if (file) preview.src = URL.createObjectURL(file);
-};
+  imageInput.addEventListener("change", () => {
+    const file = imageInput.files[0];
+    if (file) {
+      preview.src = URL.createObjectURL(file);
+    }
+  });
 
-btn.onclick = async () => {
-  const file = imgInput.files[0];
-  if (!file) {
-    alert("Chọn ảnh trước");
-    return;
-  }
+  btn.addEventListener("click", async () => {
+    const file = imageInput.files[0];
+    if (!file) {
+      alert("Hãy chọn ảnh trước");
+      return;
+    }
 
-  const fd = new FormData();
-  fd.append("image", file);
+    const formData = new FormData();
+    formData.append("image", file);
 
-  status.textContent = "Đang OCR...";
-  btn.disabled = true;
+    btn.disabled = true;
+    statusEl.textContent = "Đang OCR...";
+    ocrTextEl.textContent = "";
+    keywordsEl.innerHTML = "";
 
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: fd
-    });
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: formData
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t);
+      }
 
-    ocrText.textContent = data.ocr_text || "";
-    keywords.innerHTML = "";
+      const data = await res.json();
 
-    (data.keywords || []).forEach((k, i) => {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.href = data.google_links[i];
-      a.target = "_blank";
-      a.textContent = k;
-      li.appendChild(a);
-      keywords.appendChild(li);
-    });
+      ocrTextEl.textContent = data.ocr_text || "(Không có text)";
+      (data.keywords || []).forEach((kw, i) => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = data.google_links[i];
+        a.target = "_blank";
+        a.textContent = kw;
+        li.appendChild(a);
+        keywordsEl.appendChild(li);
+      });
 
-    status.textContent = "✅ Xong";
-  } catch (e) {
-    status.textContent = "❌ Lỗi";
-  } finally {
-    btn.disabled = false;
-  }
-};
+      statusEl.textContent = "✅ Hoàn thành";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "❌ Lỗi OCR";
+      ocrTextEl.textContent = "(Lỗi)";
+    } finally {
+      btn.disabled = false;
+    }
+  });
 </script>
-
 </body>
 </html>
