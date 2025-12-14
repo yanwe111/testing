@@ -5,25 +5,48 @@
   <title>OCR Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:860px;margin:40px auto;padding:0 16px}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+      max-width:860px;margin:40px auto;padding:0 16px
+    }
+    h1{text-align:center;margin:0 0 6px}
+    .sub{text-align:center;color:#666;margin:0 0 20px}
+
     .card{border:1px solid #ddd;border-radius:10px;padding:16px;margin-top:16px}
-    button{padding:10px 14px;border-radius:8px;border:none;cursor:pointer;background:#111;color:#fff}
+    button{
+      padding:10px 14px;border-radius:8px;border:none;
+      cursor:pointer;background:#111;color:#fff
+    }
     button:disabled{opacity:.6;cursor:not-allowed}
+
     #status{margin-top:10px;font-size:14px}
     .danger{color:#b00020}
-    #ocrText{white-space:pre-wrap;min-height:140px;background:#fafafa;border-radius:8px;padding:12px;border:1px solid #eee}
-    #preview{max-width:280px;border:1px solid #eee;border-radius:10px;display:none;margin-top:10px}
+
+    #preview{
+      max-width:280px;border:1px solid #eee;border-radius:10px;
+      display:none;margin-top:12px
+    }
+
+    #ocrText{
+      white-space:pre-wrap;min-height:140px;
+      background:#fafafa;border-radius:8px;
+      padding:12px;border:1px solid #eee
+    }
+
     ul{padding-left:18px}
+    a{color:#0b57d0;text-decoration:none}
+    a:hover{text-decoration:underline}
   </style>
 </head>
 
 <body>
-  <h1 style="text-align:center;margin:0 0 6px">OCR & Keyword Extractor</h1>
-  <div style="text-align:center;color:#666;margin:0 0 20px">Vercel Frontend</div>
+  <h1>OCR & Keyword Extractor</h1>
+  <div class="sub">Vercel Frontend • EC2 Backend</div>
 
   <div class="card">
     <input type="file" id="imageInput" accept="image/*" />
-    <img id="preview" />
+    <!-- PREVIEW GIỮ NGUYÊN -->
+    <img id="preview" alt="preview"/>
 
     <p style="margin-top:12px">
       <button id="uploadBtn">Upload & OCR</button>
@@ -39,7 +62,9 @@
 
   <div class="card">
     <h2>Keywords</h2>
-    <ul id="keywordsList"><li>(chưa có dữ liệu)</li></ul>
+    <ul id="keywordsList">
+      <li>(chưa có dữ liệu)</li>
+    </ul>
   </div>
 
 <script>
@@ -50,21 +75,25 @@
   const keywordsList = document.getElementById("keywordsList");
   const preview = document.getElementById("preview");
 
-  function setStatus(msg, err=false){
+  function setStatus(msg, isErr=false){
     statusEl.textContent = msg;
-    statusEl.className = err ? "danger" : "";
+    statusEl.className = isErr ? "danger" : "";
   }
 
+  // ✅ PREVIEW ẢNH
   imageInput.addEventListener("change", () => {
-    const f = imageInput.files[0];
-    if(!f){ preview.style.display="none"; return; }
-    preview.src = URL.createObjectURL(f);
-    preview.style.display="block";
+    const file = imageInput.files[0];
+    if (!file) {
+      preview.style.display = "none";
+      return;
+    }
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
   });
 
   async function readError(res){
     const ct = res.headers.get("content-type") || "";
-    if(ct.includes("application/json")){
+    if (ct.includes("application/json")) {
       const j = await res.json().catch(()=>null);
       return j?.error || j?.detail || JSON.stringify(j);
     }
@@ -73,10 +102,10 @@
 
   uploadBtn.addEventListener("click", async () => {
     const file = imageInput.files[0];
-    if(!file) return alert("Chọn ảnh trước!");
+    if (!file) return alert("Chọn ảnh trước!");
 
-    const fd = new FormData();
-    fd.append("image", file);
+    const formData = new FormData();
+    formData.append("image", file);
 
     uploadBtn.disabled = true;
     setStatus("Đang OCR...");
@@ -84,36 +113,39 @@
     keywordsList.innerHTML = "";
 
     try {
+      // 🚨 CHỈ GỌI PROXY VERCEL
       const res = await fetch(
-        `/api/ocr?lang=vie&psm=11&topn=5`,
-        { method:"POST", body: fd }
+        "/api/ocr?lang=vie&psm=11&topn=5",
+        { method: "POST", body: formData }
       );
 
-      if(!res.ok) throw new Error(await readError(res));
+      if (!res.ok) throw new Error(await readError(res));
       const data = await res.json();
 
       ocrTextEl.textContent = data.ocr_text || "(Không có text)";
-      keywordsList.innerHTML = "";
 
-      if(!data.keywords || !data.keywords.length){
+      keywordsList.innerHTML = "";
+      if (!data.keywords || !data.keywords.length) {
         keywordsList.innerHTML = "<li>(Không có keyword)</li>";
       } else {
-        data.keywords.forEach((kw,i)=>{
-          const li=document.createElement("li");
-          const a=document.createElement("a");
-          a.textContent=kw;
-          a.href=data.google_links?.[i]||"#";
-          a.target="_blank";
+        data.keywords.forEach((kw, i) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.textContent = kw;
+          a.href = data.google_links?.[i] || "#";
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
           li.appendChild(a);
           keywordsList.appendChild(li);
         });
       }
 
       setStatus("✅ Hoàn thành!");
-    } catch(e){
+    } catch (e) {
       console.error(e);
       setStatus("❌ " + e.message, true);
-      ocrTextEl.textContent="(Lỗi)";
+      ocrTextEl.textContent = "(Lỗi)";
+      keywordsList.innerHTML = "<li>(Lỗi)</li>";
     } finally {
       uploadBtn.disabled = false;
     }
