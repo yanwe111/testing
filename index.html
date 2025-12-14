@@ -73,130 +73,142 @@
   </div>
 
   <script>
-    // ✅ BẮT BUỘC dùng HTTPS (Vercel là HTTPS)
-    const EC2_KEYWORD_API = "https://18.138.11.123.nip.io/keywords";
+  const EC2_KEYWORD_API = "https://18.138.11.123.nip.io/keywords";
 
-    const fileInput  = document.getElementById("fileInput");
-    const preview    = document.getElementById("preview");
-    const ocrBtn     = document.getElementById("ocrBtn");
-    const clearBtn   = document.getElementById("clearBtn");
-    const statusEl   = document.getElementById("status");
-    const ocrTextEl  = document.getElementById("ocrText");
-    const keywordsEl = document.getElementById("keywords");
+  const fileInput  = document.getElementById("fileInput");
+  const preview    = document.getElementById("preview");
+  const ocrBtn     = document.getElementById("ocrBtn");
+  const clearBtn   = document.getElementById("clearBtn");
+  const statusEl   = document.getElementById("status");
+  const ocrTextEl  = document.getElementById("ocrText");
+  const keywordsEl = document.getElementById("keywords");
 
-    let imageFile = null;
+  let imageFile = null;
 
-    function setStatus(type, msg){
-      statusEl.className = "status " + (type === "ok" ? "ok" : type === "err" ? "err" : "");
-      statusEl.textContent = msg || "";
-    }
+  function setStatus(type, msg){
+    statusEl.className = "status " + (type === "ok" ? "ok" : type === "err" ? "err" : "");
+    statusEl.textContent = msg || "";
+  }
+  function resetOutputs(){
+    ocrTextEl.textContent = "(Không có dữ liệu)";
+    keywordsEl.innerHTML = '<li class="muted">(Không có dữ liệu)</li>';
+  }
 
-    function resetOutputs(){
-      ocrTextEl.textContent = "(Không có dữ liệu)";
-      keywordsEl.innerHTML = '<li class="muted">(Không có dữ liệu)</li>';
-    }
+  fileInput.addEventListener("change", () => {
+    imageFile = fileInput.files?.[0] || null;
+    preview.innerHTML = "";
 
-    fileInput.addEventListener("change", () => {
-      imageFile = fileInput.files?.[0] || null;
-      preview.innerHTML = "";
-
-      if (!imageFile) {
-        preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
-        setStatus("", "");
-        resetOutputs();
-        return;
-      }
-
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(imageFile);
-      img.onload = () => URL.revokeObjectURL(img.src);
-      preview.appendChild(img);
-
-      setStatus("", "");
-      resetOutputs();
-    });
-
-    clearBtn.addEventListener("click", () => {
-      fileInput.value = "";
-      imageFile = null;
+    if (!imageFile) {
       preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
       setStatus("", "");
       resetOutputs();
-    });
+      return;
+    }
 
-    ocrBtn.addEventListener("click", async () => {
-      setStatus("", "");
-      resetOutputs();
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(imageFile);
+    img.onload = () => URL.revokeObjectURL(img.src);
+    preview.appendChild(img);
 
-      if (!imageFile) {
-        setStatus("err", "❌ Chưa chọn ảnh");
-        return;
+    setStatus("", "");
+    resetOutputs();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    fileInput.value = "";
+    imageFile = null;
+    preview.innerHTML = '<div class="muted">Chưa chọn ảnh</div>';
+    setStatus("", "");
+    resetOutputs();
+  });
+
+  async function runPuterOCR(file) {
+    // đảm bảo SDK load xong
+    if (!window.puter) throw new Error("Puter SDK chưa load (window.puter undefined)");
+
+    // Thử theo thứ tự các API hay gặp
+    if (puter?.ai?.ocr) {
+      return await puter.ai.ocr(file);
+    }
+    if (puter?.ai?.vision?.ocr) {
+      return await puter.ai.vision.ocr(file);
+    }
+
+    // debug rõ ràng để bạn biết SDK đang có gì
+    throw new Error("Puter OCR API không tồn tại. Hãy mở console và kiểm tra puter.ai");
+  }
+
+  ocrBtn.addEventListener("click", async () => {
+    setStatus("", "");
+    resetOutputs();
+
+    if (!imageFile) {
+      setStatus("err", "❌ Chưa chọn ảnh");
+      return;
+    }
+
+    ocrBtn.disabled = true;
+    setStatus("", "⏳ Đang OCR (Puter)...");
+
+    try {
+      const ocrRes = await runPuterOCR(imageFile);
+
+      // Puter có thể trả { text } hoặc { data: { text } } tuỳ bản
+      const text =
+        (ocrRes?.text ?? ocrRes?.data?.text ?? "").toString().trim();
+
+      if (!text) {
+        console.log("OCR raw:", ocrRes);
+        throw new Error("OCR không trả text (xem console log: OCR raw)");
       }
 
-      ocrBtn.disabled = true;
-      setStatus("", "⏳ Đang OCR...");
+      ocrTextEl.textContent = text;
+      setStatus("", "⏳ Đang gửi text sang EC2 để lấy keywords...");
 
-      try {
-        // 1) OCR ở frontend bằng Puter
-        const ocrRes = await puter.ai.vision.ocr(imageFile);
-        const text = (ocrRes && ocrRes.text) ? String(ocrRes.text).trim() : "";
+      const res = await fetch(EC2_KEYWORD_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, topn: 5 }),
+      });
 
-        if (!text) {
-          setStatus("err", "❌ OCR không trả text (Puter trả rỗng)");
-          return;
-        }
+      const raw = await res.text();
+      if (!res.ok) throw new Error(`EC2 ${res.status}: ${raw}`);
 
-        ocrTextEl.textContent = text;
-        setStatus("", "⏳ Đang gửi text sang EC2 để lấy keywords...");
+      const data = JSON.parse(raw);
+      const kws = data.keywords || [];
+      const links = data.google_links || [];
 
-        // 2) Gửi text sang EC2 (HTTPS)
-        const res = await fetch(EC2_KEYWORD_API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, topn: 5 }),
+      keywordsEl.innerHTML = "";
+      if (!kws.length) {
+        keywordsEl.innerHTML = '<li class="muted">(Không có keyword)</li>';
+      } else {
+        kws.forEach((kw, i) => {
+          const li = document.createElement("li");
+          if (links[i]) {
+            const a = document.createElement("a");
+            a.href = links[i];
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = kw;
+            li.appendChild(a);
+          } else {
+            li.textContent = kw;
+          }
+          keywordsEl.appendChild(li);
         });
-
-        const raw = await res.text();
-        if (!res.ok) throw new Error(`EC2 ${res.status}: ${raw}`);
-
-        const data = JSON.parse(raw);
-        const kws = data.keywords || [];
-        const links = data.google_links || [];
-
-        keywordsEl.innerHTML = "";
-        if (!kws.length) {
-          keywordsEl.innerHTML = '<li class="muted">(Không có keyword)</li>';
-        } else {
-          kws.forEach((kw, i) => {
-            const li = document.createElement("li");
-            if (links[i]) {
-              const a = document.createElement("a");
-              a.href = links[i];
-              a.target = "_blank";
-              a.rel = "noopener noreferrer";
-              a.textContent = kw;
-              li.appendChild(a);
-            } else {
-              li.textContent = kw;
-            }
-            keywordsEl.appendChild(li);
-          });
-        }
-
-        setStatus("ok", "✅ Xong!");
-      } catch (e) {
-        console.error(e);
-        const msg = String(e?.message || e);
-        // Gợi ý đúng nguyên nhân hay gặp
-        if (msg.includes("Failed to fetch")) {
-          setStatus("err", "❌ Failed to fetch (thường do HTTPS/Mixed Content hoặc EC2 chưa mở 443/CORS)");
-        } else {
-          setStatus("err", "❌ Lỗi: " + msg);
-        }
-      } finally {
-        ocrBtn.disabled = false;
       }
-    });
-  </script>
+
+      setStatus("ok", "✅ Xong!");
+    } catch (e) {
+      console.error(e);
+      // debug nhanh cho Puter SDK
+      console.log("puter.ai =", window.puter?.ai);
+      setStatus("err", "❌ Lỗi: " + (e?.message || e));
+    } finally {
+      ocrBtn.disabled = false;
+    }
+  });
+</script>
+
 </body>
 </html>
