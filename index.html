@@ -1,150 +1,115 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <title>OCR + KeyBERT Demo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:860px;margin:40px auto;padding:0 16px}
-    h1{text-align:center;margin:0 0 6px}
-    .sub{text-align:center;color:#666;margin:0 0 20px}
-    .card{border:1px solid #ddd;border-radius:10px;padding:16px;margin-top:16px}
-    button{padding:10px 14px;border-radius:8px;border:none;cursor:pointer;background:#111;color:#fff}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    #status{margin-top:10px;font-size:14px}
-    .danger{color:#b00020}
-    #preview{max-width:280px;border:1px solid #eee;border-radius:10px;display:none;margin-top:12px}
-    #ocrText{white-space:pre-wrap;min-height:140px;background:#fafafa;border-radius:8px;padding:12px;border:1px solid #eee}
-    ul{padding-left:18px}
-    a{color:#0b57d0;text-decoration:none}
-    a:hover{text-decoration:underline}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    input[type="number"]{padding:8px 10px;border:1px solid #ddd;border-radius:8px;width:90px}
-  </style>
+<meta charset="UTF-8" />
+<title>OCR Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 900px;
+  margin: 40px auto;
+}
+.card {
+  border: 1px solid #ddd;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+img {
+  max-width: 100%;
+  margin-top: 10px;
+}
+button {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+pre {
+  white-space: pre-wrap;
+  background: #f7f7f7;
+  padding: 10px;
+}
+</style>
 </head>
-
 <body>
-  <h1>OCR and Keyword Extractor Web Demo</h1>
-  <div class="sub">Group 10</div>
 
-  <div class="card">
-    <input type="file" id="imageInput" accept="image/*" />
-    <img id="preview" alt="preview"/>
+<h1>OCR + Keyword Demo</h1>
 
-    <div class="row" style="margin-top:12px">
-      <label>TopN:</label>
-      <input id="topn" type="number" min="1" max="15" value="5" />
-      <button id="ocrBtn">OCR & Keywords</button>
-    </div>
+<div class="card">
+  <input type="file" id="imageInput" accept="image/*" />
+  <br/><br/>
+  <button id="ocrBtn">OCR</button>
+  <p id="status"></p>
+  <img id="preview" />
+</div>
 
-    <div id="status"></div>
-  </div>
+<div class="card">
+  <h3>OCR Text</h3>
+  <pre id="ocrText">(chưa có)</pre>
+</div>
 
-  <div class="card">
-    <h2>OCR Text (Puter)</h2>
-    <div id="ocrText">(chưa có dữ liệu)</div>
-  </div>
+<div class="card">
+  <h3>Keywords</h3>
+  <ul id="keywords"></ul>
+</div>
 
-  <div class="card">
-    <h2>Keywords (KeyBERT)</h2>
-    <ul id="keywordsList"><li>(chưa có dữ liệu)</li></ul>
-  </div>
+<script>
+const API_URL = "http://EC2_PUBLIC_IP:8000/process-image";
 
-  <!-- Puter SDK -->
-  <script src="https://js.puter.com/v2/"></script>
+const imgInput = document.getElementById("imageInput");
+const preview = document.getElementById("preview");
+const btn = document.getElementById("ocrBtn");
+const status = document.getElementById("status");
+const ocrText = document.getElementById("ocrText");
+const keywords = document.getElementById("keywords");
 
-  <script>
-    const imageInput = document.getElementById("imageInput");
-    const preview = document.getElementById("preview");
-    const ocrBtn = document.getElementById("ocrBtn");
-    const statusEl = document.getElementById("status");
-    const ocrTextEl = document.getElementById("ocrText");
-    const keywordsList = document.getElementById("keywordsList");
-    const topnEl = document.getElementById("topn");
+imgInput.onchange = () => {
+  const file = imgInput.files[0];
+  if (file) preview.src = URL.createObjectURL(file);
+};
 
-    function setStatus(msg, err=false){
-      statusEl.textContent = msg;
-      statusEl.className = err ? "danger" : "";
-    }
+btn.onclick = async () => {
+  const file = imgInput.files[0];
+  if (!file) {
+    alert("Chọn ảnh trước");
+    return;
+  }
 
-    imageInput.addEventListener("change", () => {
-      const f = imageInput.files[0];
-      if(!f){ preview.style.display="none"; return; }
-      preview.src = URL.createObjectURL(f);
-      preview.style.display = "block";
+  const fd = new FormData();
+  fd.append("image", file);
+
+  status.textContent = "Đang OCR...";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: fd
     });
 
-    async function ensurePuterSignIn(){
-      const signedIn = await puter.auth.isSignedIn();
-      if(!signedIn) await puter.auth.signIn();
-    }
+    const data = await res.json();
 
-    async function puterOCR(file){
-      await ensurePuterSignIn();
-      const r = await puter.ai.img2txt(file);
-      return (r?.text ?? r ?? "").toString().trim();
-    }
+    ocrText.textContent = data.ocr_text || "";
+    keywords.innerHTML = "";
 
-    function renderKeywords(keywords=[], links=[]){
-      keywordsList.innerHTML = "";
-      if(!keywords.length){
-        keywordsList.innerHTML = "<li>(Không có keyword)</li>";
-        return;
-      }
-      keywords.forEach((kw, i) => {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.textContent = kw;
-        a.href = links?.[i] || "#";
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        li.appendChild(a);
-        keywordsList.appendChild(li);
-      });
-    }
-
-    async function keywordAPI(text, topn){
-      const res = await fetch("/api/keywords", {
-        method: "POST",
-        headers: {"content-type":"application/json"},
-        body: JSON.stringify({ text, topn })
-      });
-      if(!res.ok){
-        const t = await res.text();
-        throw new Error(t || ("HTTP " + res.status));
-      }
-      return await res.json();
-    }
-
-    ocrBtn.addEventListener("click", async () => {
-      const file = imageInput.files[0];
-      if(!file) return alert("Chọn ảnh trước!");
-
-      const topn = Number(topnEl.value || 5);
-
-      ocrBtn.disabled = true;
-      setStatus("Đang OCR bằng Puter...");
-      ocrTextEl.textContent = "";
-      keywordsList.innerHTML = "";
-
-      try{
-        const text = await puterOCR(file);
-        ocrTextEl.textContent = text || "(Không có text)";
-
-        setStatus("Đang gửi text lên EC2 để lấy keywords...");
-        const kw = await keywordAPI(text, topn);
-
-        renderKeywords(kw.keywords || [], kw.google_links || []);
-        setStatus("✅ Hoàn thành!");
-      }catch(e){
-        console.error(e);
-        setStatus("❌ " + (e.message || String(e)), true);
-        ocrTextEl.textContent = "(Lỗi)";
-        renderKeywords([], []);
-      }finally{
-        ocrBtn.disabled = false;
-      }
+    (data.keywords || []).forEach((k, i) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = data.google_links[i];
+      a.target = "_blank";
+      a.textContent = k;
+      li.appendChild(a);
+      keywords.appendChild(li);
     });
-  </script>
+
+    status.textContent = "✅ Xong";
+  } catch (e) {
+    status.textContent = "❌ Lỗi";
+  } finally {
+    btn.disabled = false;
+  }
+};
+</script>
+
 </body>
 </html>
