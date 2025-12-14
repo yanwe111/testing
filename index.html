@@ -1,140 +1,215 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<title>OCR + Keyword Demo</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OCR (Puter) + KeyBERT (EC2)</title>
+  <style>
+    :root { --b:#e5e7eb; --t:#111827; --muted:#6b7280; }
+    body{
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      margin:0; background:#fafafa; color:var(--t);
+    }
+    .wrap{ max-width: 980px; margin: 40px auto; padding: 0 16px; }
+    .top{ text-align:center; margin-bottom: 18px; }
+    .top h1{ margin:0 0 6px; font-size: 34px; }
+    .top p{ margin:0; color:var(--muted); }
 
-<style>
-  body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 0 16px;
-  }
-  h1 {
-    text-align: center;
-  }
-  .card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 16px;
-  }
-  button {
-    padding: 10px 16px;
-    font-size: 14px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-  }
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  img {
-    max-width: 100%;
-    margin-top: 12px;
-    border-radius: 6px;
-    border: 1px solid #eee;
-  }
-  pre {
-    white-space: pre-wrap;
-    background: #f7f7f7;
-    padding: 12px;
-    border-radius: 6px;
-    min-height: 120px;
-  }
-</style>
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:16px;
+    }
+    @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
+
+    .card{
+      background:#fff; border:1px solid var(--b); border-radius:14px;
+      padding:16px; box-shadow: 0 1px 8px rgba(0,0,0,.04);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input[type="file"]{
+      padding:10px; border:1px solid var(--b); border-radius:10px; background:#fff;
+      width: 100%;
+    }
+    button{
+      padding:10px 14px; border-radius:10px; border:1px solid #111827;
+      background:#111827; color:#fff; cursor:pointer; font-weight:600;
+    }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .ghost{
+      background:#fff; color:#111827; border:1px solid var(--b);
+    }
+
+    .status{ margin-top:10px; font-size:14px; color:var(--muted); }
+    .status.ok{ color:#065f46; }
+    .status.err{ color:#b91c1c; }
+
+    .preview{
+      width:100%; max-height:420px; object-fit:contain;
+      border:1px dashed var(--b); border-radius:12px; background:#fafafa;
+    }
+
+    pre{
+      margin:0; white-space:pre-wrap; word-break:break-word;
+      background:#0b1020; color:#e5e7eb; border-radius:12px; padding:12px;
+      min-height: 160px;
+    }
+    ul{ margin:0; padding-left:18px; }
+    a{ color:#2563eb; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    .small{ font-size: 12px; color: var(--muted); margin-top:8px; }
+  </style>
+
+  <!-- Puter.js (OCR chạy từ frontend) -->
+  <script src="https://js.puter.com/v2/"></script>
 </head>
-
 <body>
-<h1>OCR + Keyword Extractor</h1>
+  <div class="wrap">
+    <div class="top">
+      <h1>OCR + Keyword Extractor</h1>
+      <p>OCR bằng Puter.js (frontend) → gửi text sang EC2 để chạy KeyBERT</p>
+    </div>
 
-<div class="card">
-  <input type="file" id="imageInput" accept="image/*" />
-  <br><br>
-  <button id="ocrBtn">OCR</button>
-  <p id="status"></p>
-  <img id="preview" />
-</div>
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin:0 0 10px;">1) Chọn ảnh</h3>
+        <input id="imageInput" type="file" accept="image/*" />
+        <div style="height:12px;"></div>
+        <img id="preview" class="preview" alt="Preview" />
+        <div class="small">Giữ preview như bạn yêu cầu ✅</div>
 
-<div class="card">
-  <h3>OCR Text</h3>
-  <pre id="ocrText">(chưa có dữ liệu)</pre>
-</div>
+        <div style="height:14px;"></div>
+        <div class="row">
+          <button id="ocrBtn">OCR</button>
+          <button id="clearBtn" class="ghost" type="button">Clear</button>
+        </div>
+        <div id="status" class="status">Chưa chạy.</div>
+      </div>
 
-<div class="card">
-  <h3>Keywords</h3>
-  <ul id="keywords"></ul>
-</div>
+      <div class="card">
+        <h3 style="margin:0 0 10px;">2) OCR Text</h3>
+        <pre id="ocrText">(chưa có dữ liệu)</pre>
 
-<script>
-  // 🔴 THAY IP NÀY BẰNG PUBLIC IP EC2 CỦA BẠN
-  const API_URL = "http://18.138.11.123:8000/process-image";
+        <div style="height:14px;"></div>
+        <h3 style="margin:0 0 10px;">3) Keywords</h3>
+        <ul id="keywordsList"><li>(chưa có dữ liệu)</li></ul>
+      </div>
+    </div>
+  </div>
 
-  const imageInput = document.getElementById("imageInput");
-  const preview = document.getElementById("preview");
-  const btn = document.getElementById("ocrBtn");
-  const statusEl = document.getElementById("status");
-  const ocrTextEl = document.getElementById("ocrText");
-  const keywordsEl = document.getElementById("keywords");
+  <script>
+    // ✅ ĐIỀN IP PUBLIC EC2 CỦA BẠN
+    const EC2_KEYBERT_URL = "http://18.138.11.123:8000/keywords";
 
-  imageInput.addEventListener("change", () => {
-    const file = imageInput.files[0];
-    if (file) {
-      preview.src = URL.createObjectURL(file);
+    const imageInput = document.getElementById("imageInput");
+    const preview = document.getElementById("preview");
+    const ocrBtn = document.getElementById("ocrBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusEl = document.getElementById("status");
+    const ocrTextEl = document.getElementById("ocrText");
+    const keywordsList = document.getElementById("keywordsList");
+
+    let lastObjectUrl = null;
+
+    function setStatus(msg, type){
+      statusEl.textContent = msg;
+      statusEl.className = "status" + (type ? (" " + type) : "");
     }
-  });
 
-  btn.addEventListener("click", async () => {
-    const file = imageInput.files[0];
-    if (!file) {
-      alert("Hãy chọn ảnh trước");
-      return;
+    function clearAll(){
+      ocrTextEl.textContent = "(chưa có dữ liệu)";
+      keywordsList.innerHTML = "<li>(chưa có dữ liệu)</li>";
+      setStatus("Đã clear.", "");
     }
 
-    const formData = new FormData();
-    formData.append("image", file);
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files?.[0];
+      if (!file) return;
 
-    btn.disabled = true;
-    statusEl.textContent = "Đang OCR...";
-    ocrTextEl.textContent = "";
-    keywordsEl.innerHTML = "";
+      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+      lastObjectUrl = URL.createObjectURL(file);
+      preview.src = lastObjectUrl;
 
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body: formData
-      });
+      clearAll();
+      setStatus("Đã chọn ảnh. Bấm OCR để chạy.", "");
+    });
 
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t);
+    clearBtn.addEventListener("click", () => {
+      imageInput.value = "";
+      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+      lastObjectUrl = null;
+      preview.removeAttribute("src");
+      clearAll();
+    });
+
+    ocrBtn.addEventListener("click", async () => {
+      const file = imageInput.files?.[0];
+      if (!file){
+        alert("Chọn ảnh trước đã.");
+        return;
       }
 
-      const data = await res.json();
+      ocrBtn.disabled = true;
+      clearBtn.disabled = true;
+      setStatus("Đang OCR bằng Puter...", "");
+      ocrTextEl.textContent = "";
+      keywordsList.innerHTML = "<li>...</li>";
 
-      ocrTextEl.textContent = data.ocr_text || "(Không có text)";
-      (data.keywords || []).forEach((kw, i) => {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.href = data.google_links[i];
-        a.target = "_blank";
-        a.textContent = kw;
-        li.appendChild(a);
-        keywordsEl.appendChild(li);
-      });
+      try {
+        // 1) OCR ở frontend bằng Puter
+        // puter.ai.img2txt() nhận image và trả text OCR :contentReference[oaicite:2]{index=2}
+        const ocrResult = await puter.ai.img2txt(file);
+        const text = (ocrResult?.text || ocrResult || "").toString().trim();
 
-      statusEl.textContent = "✅ Hoàn thành";
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = "❌ Lỗi OCR";
-      ocrTextEl.textContent = "(Lỗi)";
-    } finally {
-      btn.disabled = false;
-    }
-  });
-</script>
+        if (!text){
+          throw new Error("OCR không ra text (rỗng).");
+        }
+        ocrTextEl.textContent = text;
+        setStatus("OCR xong. Đang gửi text sang EC2 chạy KeyBERT...", "");
+
+        // 2) Gửi text sang EC2 để lấy keyword
+        const res = await fetch(EC2_KEYBERT_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text, topn: 5 }),
+        });
+
+        if (!res.ok){
+          const raw = await res.text();
+          throw new Error(raw || ("EC2 error: " + res.status));
+        }
+
+        const data = await res.json();
+        const kws = data.keywords || [];
+        const links = data.google_links || [];
+
+        keywordsList.innerHTML = "";
+        if (!kws.length){
+          keywordsList.innerHTML = "<li>(Không có keyword)</li>";
+        } else {
+          kws.forEach((kw, i) => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = links[i] || ("https://www.google.com/search?q=" + encodeURIComponent(kw));
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = kw;
+            li.appendChild(a);
+            keywordsList.appendChild(li);
+          });
+        }
+
+        setStatus("✅ Hoàn thành!", "ok");
+      } catch (e) {
+        console.error(e);
+        ocrTextEl.textContent = "(Không có dữ liệu)";
+        keywordsList.innerHTML = "<li>(Không có dữ liệu)</li>";
+        setStatus("❌ Lỗi: " + (e?.message || e), "err");
+      } finally {
+        ocrBtn.disabled = false;
+        clearBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
