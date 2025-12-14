@@ -57,7 +57,6 @@
       border-radius:12px;
       border:1px solid var(--border);
     }
-    .hint{margin-top:10px;color:var(--muted);font-size:14px}
 
     .btn{
       border:1px solid transparent;
@@ -97,7 +96,7 @@
     }
     ul{margin:10px 0 0 0; padding-left:18px}
     li{margin:6px 0}
-    a{color:#2563eb; text-decoration:none}
+    a{color:#2563eb; text-decoration:none; font-weight:700}
     a:hover{text-decoration:underline}
     .muted{color:var(--muted)}
   </style>
@@ -123,7 +122,6 @@
       <div class="muted">Chưa chọn ảnh</div>
     </div>
 
-
     <div id="status" class="status muted">Sẵn sàng</div>
   </section>
 
@@ -138,9 +136,7 @@
 </div>
 
 <script>
-  // ⚠️ Quan trọng: Vercel là https → EC2 cũng phải https để khỏi “Failed to fetch / Mixed content”
-  // Mẹo nhanh dùng nip.io (có https): https://18.138.11.123.nip.io/keywords
-  // Nhưng EC2 phải mở port 443 hoặc bạn reverse proxy/ALB (mình đưa CLI ở tin sau nếu cần).
+  // ⚠️ Vercel là https → EC2 endpoint nên là https để khỏi mixed-content
   const EC2_KEYWORD_API = "https://18.138.11.123.nip.io/keywords";
 
   const fileInput  = document.getElementById("fileInput");
@@ -192,11 +188,54 @@
   });
 
   async function runPuterOCR(file) {
+    // Puter SDK v2: puter.ai.img2txt(file)
     if (!window.puter?.ai?.img2txt) {
       console.log("puter.ai =", window.puter?.ai);
-      throw new Error("Puter SDK chưa có puter.ai.img2txt (kiểm tra console)");
+      throw new Error("Puter SDK chưa có puter.ai.img2txt (xem console)");
     }
     return await puter.ai.img2txt(file);
+  }
+
+  function normalizeOCRText(ocrRes){
+    let text = "";
+
+    // Một số trường hợp trả string/array/object khác nhau
+    if (typeof ocrRes === "string") text = ocrRes;
+    else if (Array.isArray(ocrRes)) text = ocrRes.join("\n");
+    else if (ocrRes?.text) text = ocrRes.text;
+    else if (ocrRes?.data?.text) text = ocrRes.data.text;
+    else text = String(ocrRes || "");
+
+    return (text || "").trim();
+  }
+
+  function renderKeywordsAsLinks(keywords, googleLinks){
+    keywordsEl.innerHTML = "";
+
+    const kws = (keywords || []).filter(Boolean);
+
+    if (!kws.length) {
+      keywordsEl.innerHTML = '<li class="muted">(Không có keyword)</li>';
+      return;
+    }
+
+    kws.forEach((kw, i) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+
+      // ưu tiên link backend trả về; nếu không có thì tự build link Google
+      const href = (googleLinks && googleLinks[i])
+        ? googleLinks[i]
+        : `https://www.google.com/search?q=${encodeURIComponent(kw)}`;
+
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = kw;
+
+      li.appendChild(a);
+      keywordsEl.appendChild(li);
+    });
   }
 
   ocrBtn.addEventListener("click", async () => {
@@ -215,26 +254,8 @@
       const ocrRes = await runPuterOCR(imageFile);
       console.log("OCR raw:", ocrRes);
 
-      let text = "";
-
-      if (typeof ocrRes === "string") {
-        text = ocrRes;
-      } else if (Array.isArray(ocrRes)) {
-        text = ocrRes.join("\n");
-      } else if (ocrRes?.text) {
-        text = ocrRes.text;
-      } else if (ocrRes?.data?.text) {
-        text = ocrRes.data.text;
-      } else {
-        text = String(ocrRes || "");
-      }
-
-      text = text.trim();
-
-      if (!text) {
-        throw new Error("OCR không có nội dung text");
-      }
-
+      const text = normalizeOCRText(ocrRes);
+      if (!text) throw new Error("OCR không có nội dung text");
 
       ocrTextEl.textContent = text;
       setStatus("muted", "⏳ Đang gửi text sang EC2 để lấy keywords...");
@@ -249,28 +270,8 @@
       if (!res.ok) throw new Error(`EC2 ${res.status}: ${raw}`);
 
       const data = JSON.parse(raw);
-      const kws = data.keywords || [];
-      const links = data.google_links || [];
 
-      keywordsEl.innerHTML = "";
-      if (!kws.length) {
-        keywordsEl.innerHTML = '<li class="muted">(Không có keyword)</li>';
-      } else {
-        kws.forEach((kw, i) => {
-          const li = document.createElement("li");
-          if (links[i]) {
-            const a = document.createElement("a");
-            a.href = links[i];
-            a.target = "_blank";
-            a.rel = "noopener noreferrer";
-            a.textContent = kw;
-            li.appendChild(a);
-          } else {
-            li.textContent = kw;
-          }
-          keywordsEl.appendChild(li);
-        });
-      }
+      renderKeywordsAsLinks(data.keywords || [], data.google_links || []);
 
       setStatus("ok", "✅ Xong!");
     } catch (e) {
